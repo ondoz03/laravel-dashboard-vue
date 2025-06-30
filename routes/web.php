@@ -32,6 +32,10 @@ Route::middleware('auth')->group(function () {
     Route::get('users/{user}/edit', [App\Http\Controllers\User\UserController::class, 'edit'])->name('users.edit');
     Route::patch('users/{user}', [App\Http\Controllers\User\UserController::class, 'update'])->name('users.update');
     Route::delete('users/{user}', [App\Http\Controllers\User\UserController::class, 'destroy'])->name('users.destroy');
+
+    // User Preferences Routes
+    Route::post('user-preferences', [App\Http\Controllers\UserPreferenceController::class, 'store'])->name('user-preferences.store');
+    Route::get('user-preferences', [App\Http\Controllers\UserPreferenceController::class, 'show'])->name('user-preferences.show');
 });
 
 require __DIR__.'/settings.php';

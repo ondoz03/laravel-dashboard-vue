@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\MasterItem;
 
+use App\Helpers\PaginationHelper;
 use App\Http\Controllers\Controller;
 use App\Models\MasterItem;
 use Illuminate\Http\RedirectResponse;
@@ -74,16 +75,7 @@ class MasterItemController extends Controller
         return Inertia::render('MasterItem/Index', [
             'masterItems' => [
                 'data' => $masterItems->items(),
-                'meta' => [
-                    'current_page' => $masterItems->currentPage(),
-                    'from' => $masterItems->firstItem(),
-                    'to' => $masterItems->lastItem(),
-                    'last_page' => $masterItems->lastPage(),
-                    'per_page' => (int)$perPage,
-                    'total' => $masterItems->total(),
-                    'path' => url()->current(),
-                    'links' => $masterItems->linkCollection(),
-                ],
+                'meta' => PaginationHelper::getMetaData($masterItems, (int)$perPage),
             ],
             'filters' => [
                 'search' => $request->input('search', ''),
@@ -97,7 +89,7 @@ class MasterItemController extends Controller
             'categories' => $categories,
             'buyers' => $buyers,
             'queryParams' => $request->all(),
-            'allowed-per-page-values' => $allowedPerPageValues,
+            'allowedPerPageValues' => $allowedPerPageValues,
             'route-path' => route('master-items.index', [], false), // pastikan sesuai route
         ]);
     }

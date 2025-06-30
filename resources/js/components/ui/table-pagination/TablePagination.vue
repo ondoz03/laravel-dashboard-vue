@@ -17,7 +17,7 @@ interface Props {
         to: number;
         total: number;
     };
-  'allowed-per-page-values': number[];
+  allowedPerPageValues: number[];
   'route-path': string;
   queryParams: Record<string, any>;
 }
@@ -33,7 +33,7 @@ const props = withDefaults(defineProps<Props>(), {
     to: 0,
     total: 0
   }),
-  'allowed-per-page-values': () => [10, 20, 50, 100],
+  allowedPerPageValues: () => [10, 20, 50, 100],
   queryParams: () => ({})
 });
 
@@ -146,26 +146,39 @@ const pageNumbers = computed(() => {
 
 <template>
   <div class="flex flex-col sm:flex-row items-center justify-between gap-4 py-2">
-    <!-- Pagination info -->
-    <div class="text-sm text-muted-foreground">
-      Showing {{ meta?.from || 0 }} to {{ meta?.to || 0 }} of {{ meta?.total || 0 }} entries (Page {{ meta?.current_page || 1 }} of {{ meta?.last_page || 1 }})
+    <!-- Top row with pagination info and per page selector -->
+    <div class="flex w-full justify-between items-center mb-2 sm:mb-0">
+      <!-- Pagination info -->
+      <div class="text-sm text-muted-foreground">
+        Showing {{ meta?.from || 0 }} to {{ meta?.to || 0 }} of {{ meta?.total || 0 }} entries (Page {{ meta?.current_page || 1 }} of {{ meta?.last_page || 1 }})
+      </div>
+
+      <!-- Per page selector aligned with pagination info -->
+      <div class="flex items-center gap-2">
+        <span class="text-sm text-muted-foreground">Per page:</span>
+        <Select
+            :model-value="(meta?.per_page || 10).toString()"
+            @update:model-value="handlePerPageChange"
+        >
+            <SelectTrigger class="h-8 w-[70px]">
+                <SelectValue :placeholder="(meta?.per_page || 10).toString()" />
+            </SelectTrigger>
+            <SelectContent>
+                <SelectItem
+                    v-for="value in props.allowedPerPageValues"
+                    :key="value"
+                    :value="value.toString()"
+                >
+                    {{ value }}
+                </SelectItem>
+            </SelectContent>
+        </Select>
+      </div>
     </div>
 
     <div class="flex flex-wrap items-center justify-between gap-4 w-full sm:w-auto">
       <!-- Pagination controls -->
       <div class="flex flex-wrap items-center gap-2">
-        <!-- Page input for direct navigation -->
-        <div class="flex items-center gap-2">
-          <Input
-            v-model="pageInput"
-            class="h-8 w-16"
-            type="number"
-            min="1"
-            :max="meta?.last_page || 1"
-            @keyup.enter="jumpToPage"
-          />
-          <Button size="sm" variant="outline" class="h-8" @click="jumpToPage">Go</Button>
-        </div>
 
         <div class="flex items-center gap-1">
           <!-- Previous Page Button -->
@@ -219,28 +232,6 @@ const pageNumbers = computed(() => {
             <ChevronsRight class="h-4 w-4" />
           </Link>
         </div>
-      </div>
-
-      <!-- Per page selector moved to the far right -->
-      <div class="flex items-center gap-2 ml-auto">
-        <span class="text-sm text-muted-foreground">Per page:</span>
-        <Select
-          :model-value="(meta?.per_page || 10).toString()"
-          @update:model-value="handlePerPageChange"
-        >
-          <SelectTrigger class="h-8 w-[70px]">
-            <SelectValue :placeholder="(meta?.per_page || 10).toString()" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem
-              v-for="value in props['allowed-per-page-values']"
-              :key="value"
-              :value="value.toString()"
-            >
-              {{ value }}
-            </SelectItem>
-          </SelectContent>
-        </Select>
       </div>
     </div>
   </div>

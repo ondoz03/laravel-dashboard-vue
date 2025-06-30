@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3';
-import { ref, watch } from 'vue';
+import { ref, watch, computed } from 'vue';
 import { debounce } from 'lodash';
-import { Eye, Pencil, Trash2, ArrowUp, ArrowDown, MoreHorizontal, MoreVertical } from 'lucide-vue-next';
+import { Eye, Pencil, Trash2, ArrowUp, ArrowDown, MoreHorizontal, MoreVertical, Plus, Filter, Search as SearchIcon } from 'lucide-vue-next';
 
 import HeadingSmall from '@/components/HeadingSmall.vue';
 import { Button } from '@/components/ui/button';
@@ -24,6 +24,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { TablePagination } from '@/components/ui/table-pagination';
+import { ColumnSelector } from '@/components/ui/column-selector';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -126,6 +127,21 @@ const showCreateModal = ref(false);
 const showEditModal = ref(false);
 const showViewModal = ref(false);
 const selectedItem = ref<MasterItem | null>(null);
+
+// Column configuration for the table
+const columns = ref([
+  { key: 'item_code', label: 'Item Code', visible: true },
+  { key: 'item_name', label: 'Item Name', visible: true },
+  { key: 'item_category', label: 'Category', visible: true },
+  { key: 'buyer', label: 'Buyer', visible: true },
+  { key: 'ppn', label: 'PPN', visible: true },
+  { key: 'pph', label: 'PPH', visible: true },
+]);
+
+// Computed property to get only visible columns
+const visibleColumns = computed(() => {
+  return columns.value.filter(column => column.visible);
+});
 
 const debouncedSearch = debounce(() => {
   const params: Record<string, string> = {
@@ -258,53 +274,59 @@ function deleteItem(id: number) {
     <div class="flex flex-col space-y-6 px-4 py-6">
       <div class="flex items-center justify-between">
         <HeadingSmall title="Master Items" description="Manage your master items" />
-        <Button @click="openCreateModal"><Plus class="mr-2 h-4 w-4" />Add New Item</Button>
+        <div class="flex items-center gap-2">
+          <ColumnSelector
+            v-model:columns="columns"
+            page="master_items"
+          />
+          <Button @click="openCreateModal"><Plus class="mr-2 h-4 w-4" />Add New Item</Button>
+        </div>
       </div>
 
-      <!-- Filters -->
-      <div class="rounded-lg border p-4">
-        <div class="space-y-4">
-          <h3 class="text-sm font-medium">Filters</h3>
-          <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
-            <div class="grid gap-2">
-              <Label for="search">Search</Label>
-              <Input
-                id="search"
-                v-model="search"
-                placeholder="Search by code, name, category or buyer"
-              />
-            </div>
-            <div class="grid gap-2">
-              <Label for="category">Category</Label>
-              <Select v-model="category" @update:modelValue="updateFilter('category', $event)">
-                <SelectTrigger id="category">
-                  <SelectValue placeholder="Select category" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Categories</SelectItem>
-                  <SelectItem v-for="cat in categories" :key="cat" :value="cat">
-                    {{ cat }}
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div class="grid gap-2">
-              <Label for="buyer">Buyer</Label>
-              <Select v-model="buyer" @update:modelValue="updateFilter('buyer', $event)">
-                <SelectTrigger id="buyer">
-                  <SelectValue placeholder="Select buyer" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Buyers</SelectItem>
-                  <SelectItem v-for="b in buyers" :key="b" :value="b">
-                    {{ b }}
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+      <!-- Filters - Redesigned to be more minimalist -->
+      <div class="rounded-lg border bg-card shadow-sm">
+        <div class="flex flex-col md:flex-row items-center justify-between p-4 gap-4">
+          <div class="relative w-full md:w-1/3">
+            <SearchIcon class="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              id="search"
+              v-model="search"
+              placeholder="Search by code, name, category or buyer"
+              class="pl-8"
+            />
           </div>
-          <div class="flex justify-end">
-            <Button variant="outline" @click="resetFilters">Reset Filters</Button>
+
+          <div class="flex flex-wrap items-center gap-2 w-full md:w-auto">
+            <Select v-model="category" @update:modelValue="updateFilter('category', $event)" class="w-full md:w-auto">
+              <SelectTrigger id="category" class="min-w-[150px]">
+                <Filter class="mr-2 h-4 w-4" />
+                <SelectValue placeholder="All Categories" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Categories</SelectItem>
+                <SelectItem v-for="cat in categories" :key="cat" :value="cat">
+                  {{ cat }}
+                </SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Select v-model="buyer" @update:modelValue="updateFilter('buyer', $event)" class="w-full md:w-auto">
+              <SelectTrigger id="buyer" class="min-w-[150px]">
+                <Filter class="mr-2 h-4 w-4" />
+                <SelectValue placeholder="All Buyers" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Buyers</SelectItem>
+                <SelectItem v-for="b in buyers" :key="b" :value="b">
+                  {{ b }}
+                </SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Button variant="outline" size="sm" @click="resetFilters">
+              <ArrowDown class="mr-2 h-4 w-4 rotate-45" />
+              Reset
+            </Button>
           </div>
         </div>
       </div>
@@ -314,81 +336,50 @@ function deleteItem(id: number) {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead
-                class="cursor-pointer hover:bg-muted/50 text-center"
-                @click="sort('item_code')"
-              >
-                <div class="flex items-center justify-center space-x-1">
-                  <span>Item Code</span>
-                  <ArrowUp v-if="sortField === 'item_code' && sortDirection === 'asc'" class="h-4 w-4" />
-                  <ArrowDown v-if="sortField === 'item_code' && sortDirection === 'desc'" class="h-4 w-4" />
-                </div>
-              </TableHead>
-              <TableHead
-                class="cursor-pointer hover:bg-muted/50 text-center"
-                @click="sort('item_name')"
-              >
-                <div class="flex items-center justify-center space-x-1">
-                  <span>Item Name</span>
-                  <ArrowUp v-if="sortField === 'item_name' && sortDirection === 'asc'" class="h-4 w-4" />
-                  <ArrowDown v-if="sortField === 'item_name' && sortDirection === 'desc'" class="h-4 w-4" />
-                </div>
-              </TableHead>
-              <TableHead
-                class="cursor-pointer hover:bg-muted/50 text-center"
-                @click="sort('item_category')"
-              >
-                <div class="flex items-center justify-center space-x-1">
-                  <span>Category</span>
-                  <ArrowUp v-if="sortField === 'item_category' && sortDirection === 'asc'" class="h-4 w-4" />
-                  <ArrowDown v-if="sortField === 'item_category' && sortDirection === 'desc'" class="h-4 w-4" />
-                </div>
-              </TableHead>
-              <TableHead
-                class="cursor-pointer hover:bg-muted/50 text-center"
-                @click="sort('buyer')"
-              >
-                <div class="flex items-center justify-center space-x-1">
-                  <span>Buyer</span>
-                  <ArrowUp v-if="sortField === 'buyer' && sortDirection === 'asc'" class="h-4 w-4" />
-                  <ArrowDown v-if="sortField === 'buyer' && sortDirection === 'desc'" class="h-4 w-4" />
-                </div>
-              </TableHead>
-              <TableHead
-                class="cursor-pointer hover:bg-muted/50 text-center"
-                @click="sort('ppn')"
-              >
-                <div class="flex items-center justify-center space-x-1">
-                  <span>PPN</span>
-                  <ArrowUp v-if="sortField === 'ppn' && sortDirection === 'asc'" class="h-4 w-4" />
-                  <ArrowDown v-if="sortField === 'ppn' && sortDirection === 'desc'" class="h-4 w-4" />
-                </div>
-              </TableHead>
-              <TableHead
-                class="cursor-pointer hover:bg-muted/50 text-center"
-                @click="sort('pph')"
-              >
-                <div class="flex items-center justify-center space-x-1">
-                  <span>PPH</span>
-                  <ArrowUp v-if="sortField === 'pph' && sortDirection === 'asc'" class="h-4 w-4" />
-                  <ArrowDown v-if="sortField === 'pph' && sortDirection === 'desc'" class="h-4 w-4" />
-                </div>
-              </TableHead>
-              <TableHead class="text-center">
+              <!-- Dynamic column headers based on visibility -->
+              <template v-for="column in columns" :key="column.key">
+                <TableHead
+                  v-if="column.visible"
+                  class="cursor-pointer hover:bg-muted/50 text-center"
+                  @click="sort(column.key)"
+                >
                   <div class="flex items-center justify-center space-x-1">
-                      <span>Actions</span>
+                    <span>{{ column.label }}</span>
+                    <ArrowUp v-if="sortField === column.key && sortDirection === 'asc'" class="h-4 w-4" />
+                    <ArrowDown v-if="sortField === column.key && sortDirection === 'desc'" class="h-4 w-4" />
                   </div>
+                </TableHead>
+              </template>
+              <!-- Always show Actions column -->
+              <TableHead class="text-center">
+                <div class="flex items-center justify-center space-x-1">
+                  <span>Actions</span>
+                </div>
               </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             <TableRow v-for="item in masterItems?.data || []" :key="item.id">
-              <TableCell class="text-center font-medium">{{ item.item_code }}</TableCell>
-              <TableCell class="text-center">{{ item.item_name }}</TableCell>
-              <TableCell class="text-center">{{ item.item_category }}</TableCell>
-              <TableCell class="text-center">{{ item.buyer }}</TableCell>
-              <TableCell class="text-center">{{ item.ppn }}%</TableCell>
-              <TableCell class="text-center">{{ item.pph }}%</TableCell>
+              <!-- Dynamic cells based on column visibility -->
+              <TableCell v-if="columns.find(col => col.key === 'item_code' && col.visible)" class="text-center font-medium">
+                {{ item.item_code }}
+              </TableCell>
+              <TableCell v-if="columns.find(col => col.key === 'item_name' && col.visible)" class="text-center">
+                {{ item.item_name }}
+              </TableCell>
+              <TableCell v-if="columns.find(col => col.key === 'item_category' && col.visible)" class="text-center">
+                {{ item.item_category }}
+              </TableCell>
+              <TableCell v-if="columns.find(col => col.key === 'buyer' && col.visible)" class="text-center">
+                {{ item.buyer }}
+              </TableCell>
+              <TableCell v-if="columns.find(col => col.key === 'ppn' && col.visible)" class="text-center">
+                {{ item.ppn }}%
+              </TableCell>
+              <TableCell v-if="columns.find(col => col.key === 'pph' && col.visible)" class="text-center">
+                {{ item.pph }}%
+              </TableCell>
+              <!-- Always show Actions cell -->
               <TableCell class="text-center">
                 <div class="flex justify-center">
                   <DropdownMenu>
@@ -416,7 +407,7 @@ function deleteItem(id: number) {
               </TableCell>
             </TableRow>
             <TableRow v-if="!masterItems?.data?.length">
-              <TableCell colspan="7" class="text-center py-2">
+              <TableCell :colspan="visibleColumns.length + 1" class="text-center py-2">
                 No master items found.
               </TableCell>
             </TableRow>
@@ -427,7 +418,7 @@ function deleteItem(id: number) {
       <!-- Pagination -->
       <TablePagination
         :meta="masterItems?.meta"
-        :allowed-per-page-values="[10, 20, 50, 100]"
+        :allowedPerPageValues="[10, 20, 50, 100]"
         route-path="/master-items"
         :queryParams="{
           search: search,

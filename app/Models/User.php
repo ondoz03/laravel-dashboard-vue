@@ -24,6 +24,14 @@ class User extends Authenticatable
     ];
 
     /**
+     * Get the preferences for the user.
+     */
+    public function preferences()
+    {
+        return $this->hasMany(UserPreference::class);
+    }
+
+    /**
      * The attributes that should be hidden for serialization.
      *
      * @var list<string>

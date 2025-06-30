@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3';
-import { ref, watch } from 'vue';
+import { ref, watch, computed } from 'vue';
 import { debounce } from 'lodash';
-import { Eye, Pencil, Trash2, ArrowUp, ArrowDown, MoreHorizontal, Plus } from 'lucide-vue-next';
+import { Eye, Pencil, Trash2, ArrowUp, ArrowDown, MoreHorizontal, Plus, Filter, Search as SearchIcon } from 'lucide-vue-next';
 
 import HeadingSmall from '@/components/HeadingSmall.vue';
 import { Button } from '@/components/ui/button';
@@ -17,6 +17,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { TablePagination } from '@/components/ui/table-pagination';
+import { ColumnSelector } from '@/components/ui/column-selector';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -60,6 +61,8 @@ interface Props {
     field: string;
     direction: 'asc' | 'desc';
   };
+  allowedPerPageValues?: number[];
+  'route-path'?: string;
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -84,6 +87,8 @@ const props = withDefaults(defineProps<Props>(), {
     field: 'name',
     direction: 'asc'
   }),
+  allowedPerPageValues: () => [10, 20, 50, 100],
+  'route-path': '',
 });
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -104,6 +109,18 @@ const showCreateModal = ref(false);
 const showEditModal = ref(false);
 const showViewModal = ref(false);
 const selectedUser = ref<User | null>(null);
+
+// Column configuration for the table
+const columns = ref([
+  { key: 'name', label: 'Name', visible: true },
+  { key: 'email', label: 'Email', visible: true },
+  { key: 'created_at', label: 'Created At', visible: true },
+]);
+
+// Computed property to get only visible columns
+const visibleColumns = computed(() => {
+  return columns.value.filter(column => column.visible);
+});
 
 const debouncedSearch = debounce(() => {
   const params: Record<string, string> = {
@@ -189,25 +206,33 @@ function deleteUser(id: number) {
     <div class="flex flex-col space-y-6 px-4 py-6">
       <div class="flex items-center justify-between">
         <HeadingSmall title="Users" description="Manage your users" />
-        <Button @click="openCreateModal"><Plus class="mr-2 h-4 w-4" />Add New User</Button>
+        <div class="flex items-center gap-2">
+          <ColumnSelector
+            v-model:columns="columns"
+            page="users"
+          />
+          <Button @click="openCreateModal"><Plus class="mr-2 h-4 w-4" />Add New User</Button>
+        </div>
       </div>
 
-      <!-- Filters -->
-      <div class="rounded-lg border p-4">
-        <div class="space-y-4">
-          <h3 class="text-sm font-medium">Filters</h3>
-          <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
-            <div class="grid gap-2">
-              <Label for="search">Search</Label>
-              <Input
-                id="search"
-                v-model="search"
-                placeholder="Search by name or email"
-              />
-            </div>
+      <!-- Filters - Redesigned to be more minimalist -->
+      <div class="rounded-lg border bg-card shadow-sm">
+        <div class="flex flex-col md:flex-row items-center justify-between p-4 gap-4">
+          <div class="relative w-full md:w-1/2">
+            <SearchIcon class="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              id="search"
+              v-model="search"
+              placeholder="Search by name or email"
+              class="pl-8"
+            />
           </div>
-          <div class="flex justify-end">
-            <Button variant="outline" @click="resetFilters">Reset Filters</Button>
+
+          <div class="flex items-center gap-2 w-full md:w-auto">
+            <Button variant="outline" size="sm" @click="resetFilters">
+              <ArrowDown class="mr-2 h-4 w-4 rotate-45" />
+              Reset
+            </Button>
           </div>
         </div>
       </div>
@@ -217,36 +242,21 @@ function deleteUser(id: number) {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead
-                class="cursor-pointer hover:bg-muted/50 text-center"
-                @click="sort('name')"
-              >
-                <div class="flex items-center justify-center space-x-1">
-                  <span>Name</span>
-                  <ArrowUp v-if="sortField === 'name' && sortDirection === 'asc'" class="h-4 w-4" />
-                  <ArrowDown v-if="sortField === 'name' && sortDirection === 'desc'" class="h-4 w-4" />
-                </div>
-              </TableHead>
-              <TableHead
-                class="cursor-pointer hover:bg-muted/50 text-center"
-                @click="sort('email')"
-              >
-                <div class="flex items-center justify-center space-x-1">
-                  <span>Email</span>
-                  <ArrowUp v-if="sortField === 'email' && sortDirection === 'asc'" class="h-4 w-4" />
-                  <ArrowDown v-if="sortField === 'email' && sortDirection === 'desc'" class="h-4 w-4" />
-                </div>
-              </TableHead>
-              <TableHead
-                class="cursor-pointer hover:bg-muted/50 text-center"
-                @click="sort('created_at')"
-              >
-                <div class="flex items-center justify-center space-x-1">
-                  <span>Created At</span>
-                  <ArrowUp v-if="sortField === 'created_at' && sortDirection === 'asc'" class="h-4 w-4" />
-                  <ArrowDown v-if="sortField === 'created_at' && sortDirection === 'desc'" class="h-4 w-4" />
-                </div>
-              </TableHead>
+              <!-- Dynamic column headers based on visibility -->
+              <template v-for="column in columns" :key="column.key">
+                <TableHead
+                  v-if="column.visible"
+                  class="cursor-pointer hover:bg-muted/50 text-center"
+                  @click="sort(column.key)"
+                >
+                  <div class="flex items-center justify-center space-x-1">
+                    <span>{{ column.label }}</span>
+                    <ArrowUp v-if="sortField === column.key && sortDirection === 'asc'" class="h-4 w-4" />
+                    <ArrowDown v-if="sortField === column.key && sortDirection === 'desc'" class="h-4 w-4" />
+                  </div>
+                </TableHead>
+              </template>
+              <!-- Always show Actions column -->
               <TableHead class="text-center">
                 <div class="flex items-center justify-center space-x-1">
                   <span>Actions</span>
@@ -256,9 +266,17 @@ function deleteUser(id: number) {
           </TableHeader>
           <TableBody>
             <TableRow v-for="user in users?.data || []" :key="user.id">
-              <TableCell class="text-center font-medium">{{ user.name }}</TableCell>
-              <TableCell class="text-center">{{ user.email }}</TableCell>
-              <TableCell class="text-center">{{ new Date(user.created_at).toLocaleDateString() }}</TableCell>
+              <!-- Dynamic cells based on column visibility -->
+              <TableCell v-if="columns.find(col => col.key === 'name' && col.visible)" class="text-center font-medium">
+                {{ user.name }}
+              </TableCell>
+              <TableCell v-if="columns.find(col => col.key === 'email' && col.visible)" class="text-center">
+                {{ user.email }}
+              </TableCell>
+              <TableCell v-if="columns.find(col => col.key === 'created_at' && col.visible)" class="text-center">
+                {{ new Date(user.created_at).toLocaleDateString() }}
+              </TableCell>
+              <!-- Always show Actions cell -->
               <TableCell class="text-center">
                 <div class="flex justify-center">
                   <DropdownMenu>
@@ -286,7 +304,7 @@ function deleteUser(id: number) {
               </TableCell>
             </TableRow>
             <TableRow v-if="!users?.data?.length">
-              <TableCell colspan="4" class="text-center py-2">
+              <TableCell :colspan="visibleColumns.length + 1" class="text-center py-2">
                 No users found.
               </TableCell>
             </TableRow>
@@ -297,9 +315,9 @@ function deleteUser(id: number) {
       <!-- Pagination -->
       <TablePagination
         :meta="users?.meta"
-        :allowed-per-page-values="[10, 20, 50, 100]"
-        route-path="/users"
-        :query-params="{
+        :allowedPerPageValues="props.allowedPerPageValues"
+        :route-path="props['route-path'] || '/users'"
+        :queryParams="{
           search: search,
           sort: sortField,
           direction: sortDirection,

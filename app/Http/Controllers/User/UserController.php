@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\User;
 
+use App\Helpers\PaginationHelper;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
@@ -59,7 +60,10 @@ class UserController extends Controller
         $users = $query->paginate($perPage)->withQueryString();
 
         return Inertia::render('User/Index', [
-            'users' => $users,
+            'users' => [
+                'data' => $users->items(),
+                'meta' => PaginationHelper::getMetaData($users, (int)$perPage),
+            ],
             'filters' => [
                 'search' => $request->input('search', ''),
             ],
@@ -67,6 +71,8 @@ class UserController extends Controller
                 'field' => $sortField,
                 'direction' => $sortDirection,
             ],
+            'allowedPerPageValues' => $allowedPerPageValues,
+            'route-path' => route('users.index', [], false),
         ]);
     }
 
