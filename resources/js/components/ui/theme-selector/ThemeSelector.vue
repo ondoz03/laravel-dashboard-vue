@@ -52,45 +52,6 @@ function applyTheme(theme: string) {
   localStorage.setItem('theme', theme);
 }
 
-function saveThemePreference(theme: string) {
-  router.post('/user-preferences', {
-    preference_type: 'theme',
-    page: 'global',
-    settings: { theme }
-  }, {
-    preserveScroll: true,
-    preserveState: true,
-    only: ['success', 'error']
-  });
-}
-
-function loadThemePreference() {
-  // First check localStorage
-  const localTheme = localStorage.getItem('theme');
-  if (localTheme && themes.some(t => t.value === localTheme)) {
-    currentTheme.value = localTheme;
-    return;
-  }
-
-  // Then check server-side preference
-  router.get('/user-preferences', {
-    preference_type: 'theme',
-    page: 'global'
-  }, {
-    preserveScroll: true,
-    preserveState: true,
-    only: ['preferences'],
-    onSuccess: (page) => {
-      if (page.props.preferences && page.props.preferences.settings && page.props.preferences.settings.theme) {
-        const theme = page.props.preferences.settings.theme;
-        if (themes.some(t => t.value === theme)) {
-          currentTheme.value = theme;
-          applyTheme(theme);
-        }
-      }
-    }
-  });
-}
 </script>
 
 <template>
