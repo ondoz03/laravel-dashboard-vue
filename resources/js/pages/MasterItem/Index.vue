@@ -344,72 +344,42 @@ function deleteItem(id: number) {
           >
 
           <!-- Category Filter with ComboboxPopover -->
-          <button
-            data-slot="popover-trigger"
-            class="inline-flex items-center justify-center whitespace-nowrap text-sm font-medium transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive border bg-background shadow-xs hover:bg-accent hover:text-accent-foreground dark:bg-input/30 dark:border-input dark:hover:bg-input/50 rounded-md gap-1.5 px-3 has-[>svg]:px-2.5 h-8 border-dashed"
-            type="button"
-            @click="categoryFilter && categoryFilter.toggle()"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-circle-plus">
-              <circle cx="12" cy="12" r="10"></circle>
-              <path d="M8 12h8"></path>
-              <path d="M12 8v8"></path>
-            </svg>
-            Category
-<!--            <div data-orientation="vertical" role="none" data-slot="separator" class="bg-border shrink-0 data-[orientation=horizontal]:h-px data-[orientation=horizontal]:w-full data-[orientation=vertical]:h-full data-[orientation=vertical]:w-px mx-2 h-4"></div>-->
-            <div v-if="category.length > 0" data-orientation="vertical" role="none" data-slot="separator" class="bg-border shrink-0 data-[orientation=horizontal]:h-px data-[orientation=horizontal]:w-full data-[orientation=vertical]:h-full data-[orientation=vertical]:w-px mx-2 h-4"></div>
-
-              <span v-if="category.length > 0" data-slot="badge" class="inline-flex items-center justify-center border py-0.5 text-xs w-fit whitespace-nowrap shrink-0 [&>svg]:size-3 gap-1 [&>svg]:pointer-events-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive transition-[color,box-shadow] overflow-hidden border-transparent bg-secondary text-secondary-foreground [a&]:hover:bg-secondary/90 rounded-sm px-1 font-normal lg:hidden">{{ category.length }}</span>
-            <div v-if="category.length > 0" class="hidden gap-1 lg:flex">
-              <span v-for="(cat, index) in category" :key="index" data-slot="badge" class="inline-flex items-center justify-center border py-0.5 text-xs w-fit whitespace-nowrap shrink-0 [&>svg]:size-3 gap-1 [&>svg]:pointer-events-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive transition-[color,box-shadow] overflow-hidden border-transparent bg-secondary text-secondary-foreground [a&]:hover:bg-secondary/90 rounded-sm px-1 font-normal">{{ cat }}</span>
+          <div id="category-filter-container" class="relative">
+            <ComboboxPopover
+              ref="categoryFilter"
+              placeholder="Category"
+              label="Category"
+              :options="categories.map(cat => ({ value: cat, label: cat }))"
+              @update:selected="
+                (selected) => {
+                  category = Array.isArray(selected) ? selected.map(item => item.value) : [selected];
+                  updateFilter('category', '', false);
+                }
+              "
+            />
+            <div v-if="category.length > 0" class="absolute top-0 right-0 -mt-2 -mr-2">
+              <span data-slot="badge" class="inline-flex items-center justify-center border py-0.5 text-xs w-fit whitespace-nowrap shrink-0 [&>svg]:size-3 gap-1 [&>svg]:pointer-events-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive transition-[color,box-shadow] overflow-hidden border-transparent bg-secondary text-secondary-foreground [a&]:hover:bg-secondary/90 rounded-sm px-1 font-normal">{{ category.length }}</span>
             </div>
-          </button>
-          <ComboboxPopover
-            ref="categoryFilter"
-            placeholder="Category"
-            label="Category"
-            :options="categories.map(cat => ({ value: cat, label: cat }))"
-            @update:selected="
-              (selected) => {
-                category = selected.map(item => item.value);
-                updateFilter('category', '', false);
-              }
-            "
-            class="hidden"
-          />
+          </div>
 
           <!-- Buyer Filter with ComboboxPopover -->
-          <button
-            data-slot="popover-trigger"
-            class="inline-flex items-center justify-center whitespace-nowrap text-sm font-medium transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive border bg-background shadow-xs hover:bg-accent hover:text-accent-foreground dark:bg-input/30 dark:border-input dark:hover:bg-input/50 rounded-md gap-1.5 px-3 has-[>svg]:px-2.5 h-8 border-dashed"
-            type="button"
-            @click="buyerFilter && buyerFilter.toggle()"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-circle-plus">
-              <circle cx="12" cy="12" r="10"></circle>
-              <path d="M8 12h8"></path>
-              <path d="M12 8v8"></path>
-            </svg>
-            Priority
-            <div v-if="buyer.length > 0" data-orientation="vertical" role="none" data-slot="separator" class="bg-border shrink-0 data-[orientation=horizontal]:h-px data-[orientation=horizontal]:w-full data-[orientation=vertical]:h-full data-[orientation=vertical]:w-px mx-2 h-4"></div>
-            <span v-if="buyer.length > 0" data-slot="badge" class="inline-flex items-center justify-center border py-0.5 text-xs w-fit whitespace-nowrap shrink-0 [&>svg]:size-3 gap-1 [&>svg]:pointer-events-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive transition-[color,box-shadow] overflow-hidden border-transparent bg-secondary text-secondary-foreground [a&]:hover:bg-secondary/90 rounded-sm px-1 font-normal lg:hidden">{{ buyer.length }}</span>
-            <div v-if="buyer.length > 0" class="hidden gap-1 lg:flex">
-              <span v-for="(b, index) in buyer" :key="index" data-slot="badge" class="inline-flex items-center justify-center border py-0.5 text-xs w-fit whitespace-nowrap shrink-0 [&>svg]:size-3 gap-1 [&>svg]:pointer-events-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive transition-[color,box-shadow] overflow-hidden border-transparent bg-secondary text-secondary-foreground [a&]:hover:bg-secondary/90 rounded-sm px-1 font-normal">{{ b }}</span>
+          <div id="buyer-filter-container" class="relative">
+            <ComboboxPopover
+              ref="buyerFilter"
+              placeholder="Priority"
+              label="Priority"
+              :options="buyers.map(b => ({ value: b, label: b }))"
+              @update:selected="
+                (selected) => {
+                  buyer = Array.isArray(selected) ? selected.map(item => item.value) : [selected];
+                  updateFilter('buyer', '', false);
+                }
+              "
+            />
+            <div v-if="buyer.length > 0" class="absolute top-0 right-0 -mt-2 -mr-2">
+              <span data-slot="badge" class="inline-flex items-center justify-center border py-0.5 text-xs w-fit whitespace-nowrap shrink-0 [&>svg]:size-3 gap-1 [&>svg]:pointer-events-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive transition-[color,box-shadow] overflow-hidden border-transparent bg-secondary text-secondary-foreground [a&]:hover:bg-secondary/90 rounded-sm px-1 font-normal">{{ buyer.length }}</span>
             </div>
-          </button>
-          <ComboboxPopover
-            ref="buyerFilter"
-            placeholder="Priority"
-            label="Priority"
-            :options="buyers.map(b => ({ value: b, label: b }))"
-            @update:selected="
-              (selected) => {
-                buyer = selected.map(item => item.value);
-                updateFilter('buyer', '', false);
-              }
-            "
-            class="hidden"
-          />
+          </div>
 
           <!-- Reset Filters Button -->
           <Button

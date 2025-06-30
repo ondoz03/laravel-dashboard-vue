@@ -64,33 +64,7 @@ function resetToDefault() {
 }
 
 
-function loadPreferences() {
-  router.get('/user-preferences', {
-    preference_type: 'columns',
-    page: props.page
-  }, {
-    preserveScroll: true,
-    preserveState: true,
-    replace: true,
-    only: ['preferences'],
-    onSuccess: (page) => {
-      if (page.props.preferences && page.props.preferences.settings) {
-        // Merge saved preferences with current columns
-        const savedSettings = page.props.preferences.settings;
-        localColumns.value = props.columns.map(col => {
-          const savedColumn = savedSettings.find((s: Column) => s.key === col.key);
-          return {
-            ...col,
-            visible: savedColumn ? savedColumn.visible : col.visible
-          };
-        });
 
-        // Update parent component
-        emit('update:columns', localColumns.value);
-      }
-    }
-  });
-}
 </script>
 
 <template>
