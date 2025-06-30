@@ -72,7 +72,19 @@ class MasterItemController extends Controller
         $buyers = MasterItem::distinct()->pluck('buyer')->filter()->values();
 
         return Inertia::render('MasterItem/Index', [
-            'masterItems' => $masterItems,
+            'masterItems' => [
+                'data' => $masterItems->items(),
+                'meta' => [
+                    'current_page' => $masterItems->currentPage(),
+                    'from' => $masterItems->firstItem(),
+                    'to' => $masterItems->lastItem(),
+                    'last_page' => $masterItems->lastPage(),
+                    'per_page' => (int)$perPage,
+                    'total' => $masterItems->total(),
+                    'path' => url()->current(),
+                    'links' => $masterItems->linkCollection(),
+                ],
+            ],
             'filters' => [
                 'search' => $request->input('search', ''),
                 'category' => $request->input('category', ''),
@@ -84,6 +96,9 @@ class MasterItemController extends Controller
             ],
             'categories' => $categories,
             'buyers' => $buyers,
+            'queryParams' => $request->all(),
+            'allowed-per-page-values' => $allowedPerPageValues,
+            'route-path' => route('master-items.index', [], false), // pastikan sesuai route
         ]);
     }
 

@@ -429,7 +429,7 @@ function deleteItem(id: number) {
         :meta="masterItems?.meta"
         :allowed-per-page-values="[10, 20, 50, 100]"
         route-path="/master-items"
-        :query-params="{
+        :queryParams="{
           search: search,
           sort: sortField,
           direction: sortDirection,
