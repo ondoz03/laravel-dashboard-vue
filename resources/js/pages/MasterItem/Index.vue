@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3';
-import { ref, watch, computed } from 'vue';
+import { ref, watch, computed, onMounted } from 'vue';
 import { debounce } from 'lodash';
-import { Eye, Pencil, Trash2, ArrowUp, ArrowDown, MoreHorizontal, MoreVertical, Plus, Filter, Search as SearchIcon } from 'lucide-vue-next';
+import { Eye, Pencil, Trash2, ArrowUp, ArrowDown, MoreHorizontal, MoreVertical, Plus, Filter, Search as SearchIcon, X, Check } from 'lucide-vue-next';
+import { ComboboxPopover } from '@/components/ui/combobox-popover';
 
 import HeadingSmall from '@/components/HeadingSmall.vue';
 import { Button } from '@/components/ui/button';
@@ -31,6 +32,16 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import { Checkbox } from '@/components/ui/checkbox';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem } from '@/types';
 import CreateItemModal from './CreateItemModal.vue';
@@ -114,12 +125,27 @@ const breadcrumbs: BreadcrumbItem[] = [
 ];
 
 const search = ref(props.filters.search);
-const category = ref(props.filters.category);
-const buyer = ref(props.filters.buyer);
+// Convert single string values to arrays for multi-select
+const category = ref<string[]>(props.filters.category === '' ? [] : [props.filters.category]);
+const buyer = ref<string[]>(props.filters.buyer === '' ? [] : [props.filters.buyer]);
+
+// Refs for filter components
+const categoryFilter = ref(null);
+const buyerFilter = ref(null);
 
 // Sorting state
 const sortField = ref(props.sort?.field || 'item_code');
 const sortDirection = ref(props.sort?.direction || 'asc');
+
+// Set initial selected values when component is mounted
+onMounted(() => {
+  if (categoryFilter.value && category.value.length > 0) {
+    categoryFilter.value.setSelected(category.value);
+  }
+  if (buyerFilter.value && buyer.value.length > 0) {
+    buyerFilter.value.setSelected(buyer.value);
+  }
+});
 
 
 // Modal state
@@ -150,28 +176,44 @@ const debouncedSearch = debounce(() => {
     direction: sortDirection.value
   };
 
-  if (category.value && category.value !== 'all') {
-    params.category = category.value;
+  if (category.value.length > 0) {
+    params.category = category.value.join(',');
   }
 
-  if (buyer.value && buyer.value !== 'all') {
-    params.buyer = buyer.value;
+  if (buyer.value.length > 0) {
+    params.buyer = buyer.value.join(',');
   }
 
   router.get(
     '/master-items',
     params,
-    { preserveState: true, replace: true }
+    { preserveState: true, replace: true, preserveScroll: true }
   );
 }, 300);
 
 watch(search, debouncedSearch);
 
-function updateFilter(type: string, value: string) {
+function updateFilter(type: string, value: string, checked: boolean) {
   if (type === 'category') {
-    category.value = value;
+    if (checked) {
+      // Add the value if it's not already in the array
+      if (!category.value.includes(value)) {
+        category.value.push(value);
+      }
+    } else {
+      // Remove the value from the array
+      category.value = category.value.filter(v => v !== value);
+    }
   } else if (type === 'buyer') {
-    buyer.value = value;
+    if (checked) {
+      // Add the value if it's not already in the array
+      if (!buyer.value.includes(value)) {
+        buyer.value.push(value);
+      }
+    } else {
+      // Remove the value from the array
+      buyer.value = buyer.value.filter(v => v !== value);
+    }
   }
 
   const params: Record<string, string> = {
@@ -180,30 +222,38 @@ function updateFilter(type: string, value: string) {
     direction: sortDirection.value
   };
 
-  if (category.value && category.value !== 'all') {
-    params.category = category.value;
+  if (category.value.length > 0) {
+    params.category = category.value.join(',');
   }
 
-  if (buyer.value && buyer.value !== 'all') {
-    params.buyer = buyer.value;
+  if (buyer.value.length > 0) {
+    params.buyer = buyer.value.join(',');
   }
 
   router.get(
     '/master-items',
     params,
-    { preserveState: true, replace: true }
+    { preserveState: true, replace: true, preserveScroll: true }
   );
 }
 
 function resetFilters() {
   search.value = '';
-  category.value = 'all';
-  buyer.value = 'all';
+  category.value = [];
+  buyer.value = [];
   sortField.value = 'item_code';
   sortDirection.value = 'asc';
 
+  // Reset the ComboboxPopover components
+  if (categoryFilter.value) {
+    categoryFilter.value.setSelected([]);
+  }
+  if (buyerFilter.value) {
+    buyerFilter.value.setSelected([]);
+  }
+
   // Explicitly set page to 1 when resetting filters
-  router.get('/master-items', { page: '1' }, { preserveState: true, replace: true });
+  router.get('/master-items', { page: '1' }, { preserveState: true, replace: true, preserveScroll: true });
 }
 
 function sort(field: string) {
@@ -226,16 +276,16 @@ function sort(field: string) {
     params.search = search.value;
   }
 
-  if (category.value && category.value !== 'all') {
-    params.category = category.value;
+  if (category.value.length > 0) {
+    params.category = category.value.join(',');
   }
 
-  if (buyer.value && buyer.value !== 'all') {
-    params.buyer = buyer.value;
+  if (buyer.value.length > 0) {
+    params.buyer = buyer.value.join(',');
   }
 
   // Navigate with the updated params
-  router.get('/master-items', params, { preserveState: true, replace: true });
+  router.get('/master-items', params, { preserveState: true, replace: true, preserveScroll: true });
 }
 
 function openCreateModal() {
@@ -279,55 +329,124 @@ function deleteItem(id: number) {
             v-model:columns="columns"
             page="master_items"
           />
-          <Button @click="openCreateModal"><Plus class="mr-2 h-4 w-4" />Add New Item</Button>
+          <Button size="sm" @click="openCreateModal"><Plus class="mr-2 h-4 w-4" />Add New Item</Button>
         </div>
       </div>
 
-      <!-- Filters - Redesigned to be more minimalist -->
-      <div class="rounded-lg border bg-card shadow-sm">
-        <div class="flex flex-col md:flex-row items-center justify-between p-4 gap-4">
-          <div class="relative w-full md:w-1/3">
-            <SearchIcon class="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              id="search"
-              v-model="search"
-              placeholder="Search by code, name, category or buyer"
-              class="pl-8"
-            />
-          </div>
+      <!-- Filters - Redesigned to match the requested UI design -->
+      <div class="flex items-center justify-between">
+        <div class="flex flex-1 items-center gap-2">
+          <input
+            data-slot="input"
+            class="file:text-foreground placeholder:text-muted-foreground selection:bg-primary selection:text-primary-foreground dark:bg-input/30 border-input flex min-w-0 rounded-md border bg-transparent px-3 py-1 text-base shadow-xs transition-[color,box-shadow] outline-none file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 md:text-sm focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive h-8 w-[150px] lg:w-[250px]"
+            placeholder="Filter tasks..."
+            v-model="search"
+          >
 
-          <div class="flex flex-wrap items-center gap-2 w-full md:w-auto">
-            <Select v-model="category" @update:modelValue="updateFilter('category', $event)" class="w-full md:w-auto">
-              <SelectTrigger id="category" class="min-w-[150px]">
-                <Filter class="mr-2 h-4 w-4" />
-                <SelectValue placeholder="All Categories" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Categories</SelectItem>
-                <SelectItem v-for="cat in categories" :key="cat" :value="cat">
-                  {{ cat }}
-                </SelectItem>
-              </SelectContent>
-            </Select>
+          <!-- Category Filter with ComboboxPopover -->
+          <button
+            data-slot="popover-trigger"
+            class="inline-flex items-center justify-center whitespace-nowrap text-sm font-medium transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive border bg-background shadow-xs hover:bg-accent hover:text-accent-foreground dark:bg-input/30 dark:border-input dark:hover:bg-input/50 rounded-md gap-1.5 px-3 has-[>svg]:px-2.5 h-8 border-dashed"
+            type="button"
+            @click="categoryFilter && categoryFilter.toggle()"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-circle-plus">
+              <circle cx="12" cy="12" r="10"></circle>
+              <path d="M8 12h8"></path>
+              <path d="M12 8v8"></path>
+            </svg>
+            Category
+<!--            <div data-orientation="vertical" role="none" data-slot="separator" class="bg-border shrink-0 data-[orientation=horizontal]:h-px data-[orientation=horizontal]:w-full data-[orientation=vertical]:h-full data-[orientation=vertical]:w-px mx-2 h-4"></div>-->
+            <div v-if="category.length > 0" data-orientation="vertical" role="none" data-slot="separator" class="bg-border shrink-0 data-[orientation=horizontal]:h-px data-[orientation=horizontal]:w-full data-[orientation=vertical]:h-full data-[orientation=vertical]:w-px mx-2 h-4"></div>
 
-            <Select v-model="buyer" @update:modelValue="updateFilter('buyer', $event)" class="w-full md:w-auto">
-              <SelectTrigger id="buyer" class="min-w-[150px]">
-                <Filter class="mr-2 h-4 w-4" />
-                <SelectValue placeholder="All Buyers" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Buyers</SelectItem>
-                <SelectItem v-for="b in buyers" :key="b" :value="b">
-                  {{ b }}
-                </SelectItem>
-              </SelectContent>
-            </Select>
+              <span v-if="category.length > 0" data-slot="badge" class="inline-flex items-center justify-center border py-0.5 text-xs w-fit whitespace-nowrap shrink-0 [&>svg]:size-3 gap-1 [&>svg]:pointer-events-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive transition-[color,box-shadow] overflow-hidden border-transparent bg-secondary text-secondary-foreground [a&]:hover:bg-secondary/90 rounded-sm px-1 font-normal lg:hidden">{{ category.length }}</span>
+            <div v-if="category.length > 0" class="hidden gap-1 lg:flex">
+              <span v-for="(cat, index) in category" :key="index" data-slot="badge" class="inline-flex items-center justify-center border py-0.5 text-xs w-fit whitespace-nowrap shrink-0 [&>svg]:size-3 gap-1 [&>svg]:pointer-events-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive transition-[color,box-shadow] overflow-hidden border-transparent bg-secondary text-secondary-foreground [a&]:hover:bg-secondary/90 rounded-sm px-1 font-normal">{{ cat }}</span>
+            </div>
+          </button>
+          <ComboboxPopover
+            ref="categoryFilter"
+            placeholder="Category"
+            label="Category"
+            :options="categories.map(cat => ({ value: cat, label: cat }))"
+            @update:selected="
+              (selected) => {
+                category = selected.map(item => item.value);
+                updateFilter('category', '', false);
+              }
+            "
+            class="hidden"
+          />
 
-            <Button variant="outline" size="sm" @click="resetFilters">
-              <ArrowDown class="mr-2 h-4 w-4 rotate-45" />
-              Reset
-            </Button>
-          </div>
+          <!-- Buyer Filter with ComboboxPopover -->
+          <button
+            data-slot="popover-trigger"
+            class="inline-flex items-center justify-center whitespace-nowrap text-sm font-medium transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive border bg-background shadow-xs hover:bg-accent hover:text-accent-foreground dark:bg-input/30 dark:border-input dark:hover:bg-input/50 rounded-md gap-1.5 px-3 has-[>svg]:px-2.5 h-8 border-dashed"
+            type="button"
+            @click="buyerFilter && buyerFilter.toggle()"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-circle-plus">
+              <circle cx="12" cy="12" r="10"></circle>
+              <path d="M8 12h8"></path>
+              <path d="M12 8v8"></path>
+            </svg>
+            Priority
+            <div v-if="buyer.length > 0" data-orientation="vertical" role="none" data-slot="separator" class="bg-border shrink-0 data-[orientation=horizontal]:h-px data-[orientation=horizontal]:w-full data-[orientation=vertical]:h-full data-[orientation=vertical]:w-px mx-2 h-4"></div>
+            <span v-if="buyer.length > 0" data-slot="badge" class="inline-flex items-center justify-center border py-0.5 text-xs w-fit whitespace-nowrap shrink-0 [&>svg]:size-3 gap-1 [&>svg]:pointer-events-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive transition-[color,box-shadow] overflow-hidden border-transparent bg-secondary text-secondary-foreground [a&]:hover:bg-secondary/90 rounded-sm px-1 font-normal lg:hidden">{{ buyer.length }}</span>
+            <div v-if="buyer.length > 0" class="hidden gap-1 lg:flex">
+              <span v-for="(b, index) in buyer" :key="index" data-slot="badge" class="inline-flex items-center justify-center border py-0.5 text-xs w-fit whitespace-nowrap shrink-0 [&>svg]:size-3 gap-1 [&>svg]:pointer-events-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive transition-[color,box-shadow] overflow-hidden border-transparent bg-secondary text-secondary-foreground [a&]:hover:bg-secondary/90 rounded-sm px-1 font-normal">{{ b }}</span>
+            </div>
+          </button>
+          <ComboboxPopover
+            ref="buyerFilter"
+            placeholder="Priority"
+            label="Priority"
+            :options="buyers.map(b => ({ value: b, label: b }))"
+            @update:selected="
+              (selected) => {
+                buyer = selected.map(item => item.value);
+                updateFilter('buyer', '', false);
+              }
+            "
+            class="hidden"
+          />
+
+          <!-- Reset Filters Button -->
+          <Button
+            data-slot="button"
+            variant="ghost"
+            size="sm"
+            @click="resetFilters"
+            class="hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50 h-8 rounded-md gap-1.5 px-3 has-[>svg]:px-2.5"
+          >
+            Reset
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-x">
+              <path d="M18 6 6 18"></path>
+              <path d="m6 6 12 12"></path>
+            </svg>
+          </Button>
+        </div>
+        <div class="flex items-center gap-2">
+          <Button
+            data-slot="button"
+            class="items-center justify-center whitespace-nowrap text-sm font-medium transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive border bg-background shadow-xs hover:bg-accent hover:text-accent-foreground dark:bg-input/30 dark:border-input dark:hover:bg-input/50 rounded-md gap-1.5 px-3 has-[>svg]:px-2.5 ml-auto hidden h-8 lg:flex"
+            type="button"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-settings2">
+              <path d="M20 7h-9"></path>
+              <path d="M14 17H5"></path>
+              <circle cx="17" cy="17" r="3"></circle>
+              <circle cx="7" cy="7" r="3"></circle>
+            </svg>
+            View
+          </Button>
+          <Button
+            size="sm"
+            @click="openCreateModal"
+            class="inline-flex items-center justify-center whitespace-nowrap text-sm font-medium transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive bg-primary text-primary-foreground shadow-xs hover:bg-primary/90 h-8 rounded-md gap-1.5 px-3 has-[>svg]:px-2.5"
+          >
+            Add Task
+          </Button>
         </div>
       </div>
 
@@ -424,8 +543,8 @@ function deleteItem(id: number) {
           search: search,
           sort: sortField,
           direction: sortDirection,
-          ...(category && category !== 'all' ? { category: category } : {}),
-          ...(buyer && buyer !== 'all' ? { buyer: buyer } : {})
+          ...(category.length > 0 ? { category: category.join(',') } : {}),
+          ...(buyer.length > 0 ? { buyer: buyer.join(',') } : {})
         }"
       />
     </div>

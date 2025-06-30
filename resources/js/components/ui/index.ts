@@ -1,6 +1,7 @@
 // Export all UI components
 export * from './button';
 export * from './column-selector';
+export * from './combobox-popover';
 export * from './dropdown-menu';
 export * from './input';
 export * from './label';

@@ -34,8 +34,8 @@ Route::middleware('auth')->group(function () {
     Route::delete('users/{user}', [App\Http\Controllers\User\UserController::class, 'destroy'])->name('users.destroy');
 
     // User Preferences Routes
-//    Route::post('user-preferences', [App\Http\Controllers\UserPreferenceController::class, 'store'])->name('user-preferences.store');
-//    Route::get('user-preferences', [App\Http\Controllers\UserPreferenceController::class, 'show'])->name('user-preferences.show');
+    Route::post('user-preferences', [App\Http\Controllers\UserPreferenceController::class, 'store'])->name('user-preferences.store');
+  Route::get('user-preferences', [App\Http\Controllers\UserPreferenceController::class, 'show'])->name('user-preferences.show');
 });
 
 require __DIR__.'/settings.php';

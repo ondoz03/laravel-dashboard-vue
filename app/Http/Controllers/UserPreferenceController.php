@@ -57,7 +57,17 @@ class UserPreferenceController extends Controller
             'page' => $validated['page'],
         ])->first();
 
-        return Inertia::render($request->header('X-Inertia-Partial-Component'), [
+        $component = $request->header('X-Inertia-Partial-Component');
+
+        // Ensure we have a valid component name
+        if (!$component) {
+            // Return JSON response if no component is specified
+            return response()->json([
+                'preferences' => $preference,
+            ]);
+        }
+
+        return Inertia::render($component, [
             'preferences' => $preference,
         ]);
     }

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import { Link } from '@inertiajs/vue3';
+import { Link, router } from '@inertiajs/vue3';
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-vue-next';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -75,18 +75,20 @@ function buildPageUrl(page: number, perPage?: number) {
   return `${routePath}?${queryString}`;
 }
 
-// Handle per page change
+  // Handle per page change
 function handlePerPageChange(value: string) {
   const perPage = parseInt(value, 10);
 
   // Reset to page 1 when changing items per page
-  // Ensure we have a valid URL before navigating
-  const url = buildPageUrl(1, perPage);
+  // Create a new object to avoid modifying the original
+  const params = { ...props.queryParams };
 
-  if (url && !url.startsWith('undefined')) {
-    // Use window.location.href for a full page reload to ensure all data is refreshed
-    window.location.href = url;
-  }
+  // Always set the page parameter to 1 when changing per_page
+  params.page = '1';
+  params.per_page = perPage.toString();
+
+  // Use Inertia router to navigate
+  router.get(props['route-path'], params, { preserveState: true, preserveScroll: true });
 }
 
 // Handle manual page input
@@ -103,14 +105,19 @@ function jumpToPage() {
   // Update the input value to the validated page number
   pageInput.value = page.toString();
 
-  // Build the URL with the current per_page value
-  const url = buildPageUrl(page);
+  // Create a new object to avoid modifying the original
+  const params = { ...props.queryParams };
 
-  // Ensure we have a valid URL before navigating
-  if (url && !url.startsWith('undefined')) {
-    // Use window.location.href for a full page reload to ensure all data is refreshed
-    window.location.href = url;
+  // Set the page parameter
+  params.page = page.toString();
+
+  // Set per_page parameter if available
+  if (props.meta?.per_page) {
+    params.per_page = props.meta.per_page.toString();
   }
+
+  // Use Inertia router to navigate
+  router.get(props['route-path'], params, { preserveState: true, preserveScroll: true });
 }
 
 // Generate page numbers to display

@@ -132,7 +132,7 @@ const debouncedSearch = debounce(() => {
   router.get(
     '/users',
     params,
-    { preserveState: true, replace: true }
+    { preserveState: true, replace: true, preserveScroll: true }
   );
 }, 300);
 
@@ -144,7 +144,7 @@ function resetFilters() {
   sortDirection.value = 'asc';
 
   // Explicitly set page to 1 when resetting filters
-  router.get('/users', { page: '1' }, { preserveState: true, replace: true });
+  router.get('/users', { page: '1' }, { preserveState: true, replace: true, preserveScroll: true });
 }
 
 function sort(field: string) {
@@ -168,7 +168,7 @@ function sort(field: string) {
   }
 
   // Navigate with the updated params
-  router.get('/users', params, { preserveState: true, replace: true });
+  router.get('/users', params, { preserveState: true, replace: true, preserveScroll: true });
 }
 
 function openCreateModal() {
