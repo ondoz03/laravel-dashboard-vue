@@ -63,24 +63,31 @@ function updatePerPage(value: string) {
   // Build query params
   const params: Record<string, string> = {
     ...props.queryParams,
-    per_page: perPage.value
+    per_page: perPage.value,
+    page: '1' // Reset to first page when changing items per page
   };
 
   // Navigate with the updated params
   router.get(props.routePath, params, { preserveState: true, replace: true });
 }
 
-function jumpToPage() {
-  if (!goToPage.value || goToPage.value < 1 || goToPage.value > (props.meta?.last_page || 1)) {
+function jumpToPage(pageNumber?: number) {
+  // If pageNumber is provided, use it; otherwise use goToPage.value
+  const targetPage = pageNumber || goToPage.value;
+
+  if (!targetPage || targetPage < 1 || targetPage > (props.meta?.last_page || 1)) {
     // Reset to current page if invalid
     goToPage.value = props.meta?.current_page || 1;
     return;
   }
 
+  // Update goToPage.value to match the target page
+  goToPage.value = targetPage;
+
   // Build query params
   const params: Record<string, string> = {
     ...props.queryParams,
-    page: goToPage.value.toString(),
+    page: targetPage.toString(),
     per_page: perPage.value
   };
 
@@ -88,32 +95,18 @@ function jumpToPage() {
   router.get(props.routePath, params, { preserveState: true, replace: true });
 }
 
-function navigateToPage(url: string) {
-  // Parse the URL to extract the path and query parameters
-  const urlObj = new URL(url, window.location.origin);
-  const path = urlObj.pathname;
-
-  // Extract query parameters from the URL
-  const queryParams: Record<string, string> = {};
-  urlObj.searchParams.forEach((value, key) => {
-    queryParams[key] = value;
-  });
-
-  // Navigate to the page with the extracted query parameters
-  router.get(path, queryParams, { preserveState: true, replace: true });
-}
 </script>
 
 <template>
-  <div class="flex flex-col space-y-4 sm:flex-row sm:justify-between sm:items-center sm:space-y-0 mt-4 p-4 border rounded-md bg-background">
+  <div class="flex flex-col space-y-4 sm:flex-row sm:justify-between sm:items-center sm:space-y-0 mt-4 p-4 border rounded-lg bg-background shadow-sm">
     <div class="flex flex-col space-y-2 sm:flex-row sm:items-center sm:space-x-4 sm:space-y-0">
       <div class="text-sm text-muted-foreground">
-        Showing {{ meta?.from || 0 }} to {{ meta?.to || 0 }} of {{ meta?.total || 0 }} items
+        Showing <span class="font-medium">{{ meta?.from || 0 }}</span> to <span class="font-medium">{{ meta?.to || 0 }}</span> of <span class="font-medium">{{ meta?.total || 0 }}</span> items
       </div>
       <div class="flex items-center space-x-2">
         <span class="text-sm text-muted-foreground">Items per page:</span>
         <Select v-model="perPage" @update:modelValue="updatePerPage">
-          <SelectTrigger class="w-20">
+          <SelectTrigger class="w-20 h-8">
             <SelectValue :placeholder="perPage" />
           </SelectTrigger>
           <SelectContent>
@@ -136,29 +129,97 @@ function navigateToPage(url: string) {
           v-model="goToPage"
           @keyup.enter="jumpToPage"
         />
-        <Button size="sm" variant="outline" @click="jumpToPage">Go</Button>
+        <Button size="sm" variant="outline" class="h-8" @click="jumpToPage">Go</Button>
       </div>
       <Pagination>
         <PaginationContent>
-          <template v-for="link in meta?.links || []" :key="link.label">
-            <PaginationItem v-if="link.url && link.label.includes('Previous')">
-              <PaginationPrevious @click="navigateToPage(link.url)" />
-            </PaginationItem>
-            <PaginationItem v-else-if="link.url && link.label.includes('Next')">
-              <PaginationNext @click="navigateToPage(link.url)" />
-            </PaginationItem>
-            <PaginationItem v-else-if="link.url">
+          <!-- Previous Page Button -->
+          <PaginationItem v-if="meta?.current_page > 1">
+            <PaginationPrevious @click="jumpToPage(meta?.current_page - 1)" />
+          </PaginationItem>
+          <PaginationItem v-else>
+            <PaginationPrevious class="opacity-50 cursor-not-allowed" />
+          </PaginationItem>
+
+          <!-- Page Number Buttons -->
+          <template v-if="meta?.last_page <= 7">
+            <!-- Show all pages if there are 7 or fewer -->
+            <PaginationItem v-for="page in meta?.last_page" :key="page">
               <PaginationLink
-                :isActive="link.active"
-                @click="navigateToPage(link.url)"
+                :isActive="page === meta?.current_page"
+                @click="goToPage = page; jumpToPage()"
               >
-                {{ link.label }}
+                {{ page }}
               </PaginationLink>
             </PaginationItem>
-            <PaginationItem v-else>
+          </template>
+          <template v-else>
+            <!-- Show first page -->
+            <PaginationItem>
+              <PaginationLink
+                :isActive="meta?.current_page === 1"
+                @click="goToPage = 1; jumpToPage()"
+              >
+                1
+              </PaginationLink>
+            </PaginationItem>
+
+            <!-- Show ellipsis if current page is > 3 -->
+            <PaginationItem v-if="meta?.current_page > 3">
               <PaginationEllipsis />
             </PaginationItem>
+
+            <!-- Show previous page if current page > 2 -->
+            <PaginationItem v-if="meta?.current_page > 2">
+              <PaginationLink
+                @click="goToPage = meta?.current_page - 1; jumpToPage()"
+              >
+                {{ meta?.current_page - 1 }}
+              </PaginationLink>
+            </PaginationItem>
+
+            <!-- Show current page if not first or last -->
+            <PaginationItem v-if="meta?.current_page !== 1 && meta?.current_page !== meta?.last_page">
+              <PaginationLink
+                :isActive="true"
+                @click="goToPage = meta?.current_page; jumpToPage()"
+              >
+                {{ meta?.current_page }}
+              </PaginationLink>
+            </PaginationItem>
+
+            <!-- Show next page if current page < last_page - 1 -->
+            <PaginationItem v-if="meta?.current_page < meta?.last_page - 1">
+              <PaginationLink
+                @click="goToPage = meta?.current_page + 1; jumpToPage()"
+              >
+                {{ meta?.current_page + 1 }}
+              </PaginationLink>
+            </PaginationItem>
+
+            <!-- Show ellipsis if current page < last_page - 2 -->
+            <PaginationItem v-if="meta?.current_page < meta?.last_page - 2">
+              <PaginationEllipsis />
+            </PaginationItem>
+
+            <!-- Show last page -->
+            <PaginationItem>
+              <PaginationLink
+                :isActive="meta?.current_page === meta?.last_page"
+                @click="goToPage = meta?.last_page; jumpToPage()"
+              >
+                {{ meta?.last_page }}
+              </PaginationLink>
+            </PaginationItem>
           </template>
+
+          <!-- Next Page Button -->
+          <PaginationItem v-if="meta?.current_page < meta?.last_page">
+            <PaginationNext @click="jumpToPage(meta?.current_page + 1)" />
+          </PaginationItem>
+          <PaginationItem v-else>
+            <PaginationNext class="opacity-50 cursor-not-allowed" />
+          </PaginationItem>
         </PaginationContent>
       </Pagination>
     </div>

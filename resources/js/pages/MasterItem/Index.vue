@@ -2,7 +2,7 @@
 import { Head, Link, router } from '@inertiajs/vue3';
 import { ref, watch } from 'vue';
 import { debounce } from 'lodash';
-import { Eye, Pencil, Trash2, ArrowUp, ArrowDown } from 'lucide-vue-next';
+import { Eye, Pencil, Trash2, ArrowUp, ArrowDown, MoreHorizontal, MoreVertical } from 'lucide-vue-next';
 
 import HeadingSmall from '@/components/HeadingSmall.vue';
 import { Button } from '@/components/ui/button';
@@ -24,6 +24,12 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { TablePagination } from '@/components/ui/table-pagination';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem } from '@/types';
 import CreateItemModal from './CreateItemModal.vue';
@@ -252,11 +258,11 @@ function deleteItem(id: number) {
     <div class="flex flex-col space-y-6 px-4 py-6">
       <div class="flex items-center justify-between">
         <HeadingSmall title="Master Items" description="Manage your master items" />
-        <Button @click="openCreateModal">Add New Item</Button>
+        <Button @click="openCreateModal"><Plus class="mr-2 h-4 w-4" />Add New Item</Button>
       </div>
 
       <!-- Filters -->
-      <div class="rounded-md border p-4">
+      <div class="rounded-lg border p-4">
         <div class="space-y-4">
           <h3 class="text-sm font-medium">Filters</h3>
           <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
@@ -304,112 +310,113 @@ function deleteItem(id: number) {
       </div>
 
       <!-- Table -->
-      <div class="rounded-md border">
+      <div class="rounded-lg border shadow-sm">
         <Table>
           <TableHeader>
             <TableRow>
               <TableHead
-                class="cursor-pointer hover:bg-muted/50"
+                class="cursor-pointer hover:bg-muted/50 text-center"
                 @click="sort('item_code')"
               >
-                <div class="flex items-center space-x-1">
+                <div class="flex items-center justify-center space-x-1">
                   <span>Item Code</span>
                   <ArrowUp v-if="sortField === 'item_code' && sortDirection === 'asc'" class="h-4 w-4" />
                   <ArrowDown v-if="sortField === 'item_code' && sortDirection === 'desc'" class="h-4 w-4" />
                 </div>
               </TableHead>
               <TableHead
-                class="cursor-pointer hover:bg-muted/50"
+                class="cursor-pointer hover:bg-muted/50 text-center"
                 @click="sort('item_name')"
               >
-                <div class="flex items-center space-x-1">
+                <div class="flex items-center justify-center space-x-1">
                   <span>Item Name</span>
                   <ArrowUp v-if="sortField === 'item_name' && sortDirection === 'asc'" class="h-4 w-4" />
                   <ArrowDown v-if="sortField === 'item_name' && sortDirection === 'desc'" class="h-4 w-4" />
                 </div>
               </TableHead>
               <TableHead
-                class="cursor-pointer hover:bg-muted/50"
+                class="cursor-pointer hover:bg-muted/50 text-center"
                 @click="sort('item_category')"
               >
-                <div class="flex items-center space-x-1">
+                <div class="flex items-center justify-center space-x-1">
                   <span>Category</span>
                   <ArrowUp v-if="sortField === 'item_category' && sortDirection === 'asc'" class="h-4 w-4" />
                   <ArrowDown v-if="sortField === 'item_category' && sortDirection === 'desc'" class="h-4 w-4" />
                 </div>
               </TableHead>
               <TableHead
-                class="cursor-pointer hover:bg-muted/50"
+                class="cursor-pointer hover:bg-muted/50 text-center"
                 @click="sort('buyer')"
               >
-                <div class="flex items-center space-x-1">
+                <div class="flex items-center justify-center space-x-1">
                   <span>Buyer</span>
                   <ArrowUp v-if="sortField === 'buyer' && sortDirection === 'asc'" class="h-4 w-4" />
                   <ArrowDown v-if="sortField === 'buyer' && sortDirection === 'desc'" class="h-4 w-4" />
                 </div>
               </TableHead>
               <TableHead
-                class="cursor-pointer hover:bg-muted/50"
+                class="cursor-pointer hover:bg-muted/50 text-center"
                 @click="sort('ppn')"
               >
-                <div class="flex items-center space-x-1">
+                <div class="flex items-center justify-center space-x-1">
                   <span>PPN</span>
                   <ArrowUp v-if="sortField === 'ppn' && sortDirection === 'asc'" class="h-4 w-4" />
                   <ArrowDown v-if="sortField === 'ppn' && sortDirection === 'desc'" class="h-4 w-4" />
                 </div>
               </TableHead>
               <TableHead
-                class="cursor-pointer hover:bg-muted/50"
+                class="cursor-pointer hover:bg-muted/50 text-center"
                 @click="sort('pph')"
               >
-                <div class="flex items-center space-x-1">
+                <div class="flex items-center justify-center space-x-1">
                   <span>PPH</span>
                   <ArrowUp v-if="sortField === 'pph' && sortDirection === 'asc'" class="h-4 w-4" />
                   <ArrowDown v-if="sortField === 'pph' && sortDirection === 'desc'" class="h-4 w-4" />
                 </div>
               </TableHead>
-              <TableHead class="text-right">Actions</TableHead>
+              <TableHead class="text-center">
+                  <div class="flex items-center justify-center space-x-1">
+                      <span>Actions</span>
+                  </div>
+              </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             <TableRow v-for="item in masterItems?.data || []" :key="item.id">
-              <TableCell>{{ item.item_code }}</TableCell>
-              <TableCell>{{ item.item_name }}</TableCell>
-              <TableCell>{{ item.item_category }}</TableCell>
-              <TableCell>{{ item.buyer }}</TableCell>
-              <TableCell>{{ item.ppn }}%</TableCell>
-              <TableCell>{{ item.pph }}%</TableCell>
-              <TableCell class="text-right">
-                <div class="flex justify-end space-x-2">
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    @click="openViewModal(item)"
-                    title="View"
-                  >
-                    <Eye class="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    @click="openEditModal(item)"
-                    title="Edit"
-                  >
-                    <Pencil class="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="destructive"
-                    size="icon"
-                    @click="deleteItem(item.id)"
-                    title="Delete"
-                  >
-                    <Trash2 class="h-4 w-4" />
-                  </Button>
+              <TableCell class="text-center font-medium">{{ item.item_code }}</TableCell>
+              <TableCell class="text-center">{{ item.item_name }}</TableCell>
+              <TableCell class="text-center">{{ item.item_category }}</TableCell>
+              <TableCell class="text-center">{{ item.buyer }}</TableCell>
+              <TableCell class="text-center">{{ item.ppn }}%</TableCell>
+              <TableCell class="text-center">{{ item.pph }}%</TableCell>
+              <TableCell class="text-center">
+                <div class="flex justify-center">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon">
+                        <MoreHorizontal class="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem @click="openViewModal(item)">
+                        <Eye class="mr-2 h-4 w-4" />
+                        View
+                      </DropdownMenuItem>
+                      <DropdownMenuItem @click="openEditModal(item)">
+                        <Pencil class="mr-2 h-4 w-4" />
+                        Edit
+                      </DropdownMenuItem>
+                      <DropdownMenuItem @click="deleteItem(item.id)" class="text-destructive focus:text-destructive">
+                        <Trash2 class="mr-2 h-4 w-4" />
+                        Delete
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
               </TableCell>
             </TableRow>
             <TableRow v-if="!masterItems?.data?.length">
-              <TableCell colspan="7" class="text-center py-4">
+              <TableCell colspan="7" class="text-center py-2">
                 No master items found.
               </TableCell>
             </TableRow>
@@ -423,11 +430,11 @@ function deleteItem(id: number) {
         :allowed-per-page-values="[10, 20, 50, 100]"
         route-path="/master-items"
         :query-params="{
-          search: search.value,
-          sort: sortField.value,
-          direction: sortDirection.value,
-          ...(category.value && category.value !== 'all' ? { category: category.value } : {}),
-          ...(buyer.value && buyer.value !== 'all' ? { buyer: buyer.value } : {})
+          search: search,
+          sort: sortField,
+          direction: sortDirection,
+          ...(category && category !== 'all' ? { category: category } : {}),
+          ...(buyer && buyer !== 'all' ? { buyer: buyer } : {})
         }"
       />
     </div>

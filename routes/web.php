@@ -23,5 +23,16 @@ Route::middleware('auth')->group(function () {
     Route::delete('master-items/{masterItem}', [MasterItemController::class, 'destroy'])->name('master-items.destroy');
 });
 
+// User Management Routes
+Route::middleware('auth')->group(function () {
+    Route::get('users', [App\Http\Controllers\User\UserController::class, 'index'])->name('users.index');
+    Route::get('users/create', [App\Http\Controllers\User\UserController::class, 'create'])->name('users.create');
+    Route::post('users', [App\Http\Controllers\User\UserController::class, 'store'])->name('users.store');
+    Route::get('users/{user}', [App\Http\Controllers\User\UserController::class, 'show'])->name('users.show');
+    Route::get('users/{user}/edit', [App\Http\Controllers\User\UserController::class, 'edit'])->name('users.edit');
+    Route::patch('users/{user}', [App\Http\Controllers\User\UserController::class, 'update'])->name('users.update');
+    Route::delete('users/{user}', [App\Http\Controllers\User\UserController::class, 'destroy'])->name('users.destroy');
+});
+
 require __DIR__.'/settings.php';
 require __DIR__.'/auth.php';
