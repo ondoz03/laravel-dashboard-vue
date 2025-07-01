@@ -35,7 +35,7 @@ onMounted(() => {
   localColumns.value = JSON.parse(JSON.stringify(props.columns));
 
   // Load saved preferences if available
-  loadPreferences();
+  // loadPreferences();
 });
 
 // Watch for changes in props.columns

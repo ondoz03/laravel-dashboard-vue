@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Redirect;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
+use Spatie\Permission\Models\Role;
 
 class UserController extends Controller
 {
@@ -57,7 +58,7 @@ class UserController extends Controller
             $perPage = 10;
         }
 
-        $users = $query->paginate($perPage)->withQueryString();
+        $users = $query->with('roles')->paginate($perPage)->withQueryString();
 
         return Inertia::render('User/Index', [
             'users' => [
@@ -81,7 +82,11 @@ class UserController extends Controller
      */
     public function create(): Response
     {
-        return Inertia::render('User/Create');
+        $roles = Role::all();
+
+        return Inertia::render('User/Create', [
+            'roles' => $roles,
+        ]);
     }
 
     /**
@@ -93,12 +98,20 @@ class UserController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users'],
             'password' => ['required', 'string', 'min:8', 'confirmed'],
+            'roles' => ['nullable', 'array'],
+            'roles.*' => ['exists:roles,id'],
         ]);
 
         // Hash the password
         $validated['password'] = Hash::make($validated['password']);
 
-        User::create($validated);
+        $user = User::create($validated);
+
+        // Assign roles to the user
+        if (isset($validated['roles'])) {
+            $roles = Role::whereIn('id', $validated['roles'])->get();
+            $user->syncRoles($roles);
+        }
 
         return Redirect::route('users.index')->with('success', 'User created successfully.');
     }
@@ -108,6 +121,8 @@ class UserController extends Controller
      */
     public function show(User $user): Response
     {
+        $user->load('roles');
+
         return Inertia::render('User/Show', [
             'user' => $user,
         ]);
@@ -118,8 +133,12 @@ class UserController extends Controller
      */
     public function edit(User $user): Response
     {
+        $roles = Role::all();
+
         return Inertia::render('User/Edit', [
             'user' => $user,
+            'roles' => $roles,
+            'userRoles' => $user->roles()->pluck('id')->toArray(),
         ]);
     }
 
@@ -132,6 +151,8 @@ class UserController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'email', 'max:255', Rule::unique('users')->ignore($user->id)],
             'password' => ['nullable', 'string', 'min:8', 'confirmed'],
+            'roles' => ['nullable', 'array'],
+            'roles.*' => ['exists:roles,id'],
         ]);
 
         // Only update password if provided
@@ -142,6 +163,14 @@ class UserController extends Controller
         }
 
         $user->update($validated);
+
+        // Sync roles
+        if (isset($validated['roles'])) {
+            $roles = Role::whereIn('id', $validated['roles'])->get();
+            $user->syncRoles($roles);
+        } else {
+            $user->syncRoles([]);
+        }
 
         return Redirect::route('users.index')->with('success', 'User updated successfully.');
     }
